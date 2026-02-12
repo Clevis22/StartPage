@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Home</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <button id="settingsToggle" class="settings-fab" aria-label="Open settings">⚙</button>
+    <div class="page">
+      <main class="layout">
+        <section class="left-column">
+          <section class="hero-card glass">
+            <div class="datetime">
+              <div id="time" class="time"></div>
+              <div id="date" class="date"></div>
+            </div>
+
+            <form
+              id="searchForm"
+              class="search"
+              action="https://www.google.com/search"
+              method="get"
+              target="_self"
+            >
+              <span class="search-icon">⌕</span>
+              <input
+                type="text"
+                name="q"
+                id="searchInput"
+                placeholder="Search Google"
+                autocomplete="off"
+              />
+            </form>
+
+            <div class="quick-links" id="quickLinks"></div>
+          </section>
+
+          <section class="left-widgets">
+            <article class="widget glass" id="serverWidget">
+              <header class="widget-header">
+                <h2>Server</h2>
+                <button class="icon-button" id="serverRefresh" aria-label="Refresh stats">
+                  ↻
+                </button>
+              </header>
+              <div class="widget-body" id="serverBody">
+                <div class="muted">Loading server stats…</div>
+              </div>
+            </article>
+          </section>
+        </section>
+
+        <section class="widgets">
+          <article class="widget glass" id="clockCalendarWidget">
+            <header class="widget-header">
+              <h2>Today</h2>
+            </header>
+            <div class="widget-body">
+              <div class="day-progress">
+                <div class="day-progress-top">
+                  <span class="day-progress-label">Day Progress</span>
+                  <span id="dayProgressText" class="day-progress-value"></span>
+                </div>
+                <div class="day-progress-bar">
+                  <div id="dayProgressFill" class="day-progress-fill"></div>
+                </div>
+              </div>
+              <div class="calendar" id="calendar"></div>
+            </div>
+          </article>
+
+          <article class="widget glass" id="weatherWidget">
+            <header class="widget-header">
+              <h2>Weather</h2>
+              <button class="icon-button" id="weatherRefresh" aria-label="Refresh weather">
+                ↻
+              </button>
+            </header>
+            <div class="widget-body" id="weatherBody">
+              <div class="muted">Loading weather…</div>
+            </div>
+          </article>
+
+        </section>
+      </main>
+    </div>
+
+    <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
+      <div class="settings-panel-inner glass">
+        <header class="settings-header">
+          <span>Preferences</span>
+          <button class="icon-button" id="settingsClose" aria-label="Close settings">✕</button>
+        </header>
+        <div class="settings-section">
+          <h3>Appearance</h3>
+          <label class="setting-row">
+            <span>Accent color</span>
+            <input type="color" id="accentColor" />
+          </label>
+        </div>
+        <div class="settings-section">
+          <h3>Widgets</h3>
+          <label class="setting-row">
+            <span>Show Weather</span>
+            <input type="checkbox" id="toggleWeather" checked />
+          </label>
+          <label class="setting-row">
+            <span>Show Server Stats</span>
+            <input type="checkbox" id="toggleServer" checked />
+          </label>
+        </div>
+        <div class="settings-section">
+          <h3>Quick Links</h3>
+          <p class="settings-hint">One per line: label,URL,icon (optional)</p>
+          <textarea id="quickLinksEditor" class="settings-textarea" rows="4"></textarea>
+          <div class="settings-buttons">
+            <button class="icon-button" id="quickLinksSave">Save</button>
+            <button class="icon-button" id="quickLinksReset">Reset</button>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
