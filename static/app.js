@@ -581,6 +581,24 @@ function formatBytes(v) {
   return `${n.toFixed(1)} ${units[u]}`;
 }
 
+function isProbablyUrl(text) {
+  if (!text) return false;
+  const trimmed = text.trim();
+  if (!trimmed || /\s/.test(trimmed)) return false;
+  if (!trimmed.includes(".")) return false;
+  try {
+    // If it parses as a URL when we add a scheme, treat as URL-like
+    // (this will handle cases like "apple.com" or "finance.yahoo.com").
+    // eslint-disable-next-line no-new
+    new URL(trimmed.startsWith("http://") || trimmed.startsWith("https://")
+      ? trimmed
+      : `https://${trimmed}`);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function init() {
   updateClock();
   setInterval(updateClock, 30 * 1000);
@@ -593,8 +611,24 @@ function init() {
   renderCalendar();
 
   const searchInput = $("searchInput");
+  const searchForm = $("searchForm");
   if (searchInput) {
     searchInput.focus();
+  }
+
+  if (searchForm && searchInput) {
+    searchForm.addEventListener("submit", (e) => {
+      const query = (searchInput.value || "").trim();
+      if (!query) return;
+      if (isProbablyUrl(query)) {
+        e.preventDefault();
+        let url = query;
+        if (!/^https?:\/\//i.test(url)) {
+          url = `https://${url}`;
+        }
+        window.location.href = url;
+      }
+    });
   }
 
   const wRefresh = $("weatherRefresh");
