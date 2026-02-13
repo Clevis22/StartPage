@@ -592,6 +592,11 @@ function init() {
   initQuickLinksEditor();
   renderCalendar();
 
+  const searchInput = $("searchInput");
+  if (searchInput) {
+    searchInput.focus();
+  }
+
   const wRefresh = $("weatherRefresh");
   const sRefresh = $("serverRefresh");
 
