@@ -7,6 +7,7 @@ A personal browser start page you can host on your VPS. It provides:
 - Calendar for the current month
 - Weather via the free Open‑Meteo API (no API key)
 - Server statistics for the VPS (CPU, memory, disk, uptime, top processes)
+ - Horizontal stock ticker bar with daily gain/loss
 - Dark, minimal, Apple‑inspired UI
 - Customizable accent color and quick links
 
@@ -25,6 +26,7 @@ This document covers how the app works, how it is deployed on your Ubuntu VPS, a
     - `GET /api/weather` – proxy to Open‑Meteo
     - `GET /api/server-stats` – server metrics via `psutil`
     - `GET /api/news` – RSS → JSON (currently unused in UI; optional)
+    - `GET /api/stocks` – stock quotes via `yfinance`
     - `GET /favicon.ico` – serves favicon from `static/`
 - **Frontend**
   - Template: `templates/index.html`
@@ -36,6 +38,7 @@ This document covers how the app works, how it is deployed on your Ubuntu VPS, a
 - **Metrics / Data Sources**
   - **Weather:** Open‑Meteo `v1/forecast` endpoint
   - **Server stats:** `psutil` and `os.getloadavg()`
+  - **Stocks:** Yahoo Finance via the `yfinance` Python library
   - **(Optional) News:** RSS/Atom feeds via `xml.etree.ElementTree`
 - **Production Stack**
   - Ubuntu VPS
@@ -217,7 +220,7 @@ Main layout:
 Key areas:
 
 - **Clock & calendar**
-  - `updateClock()` – updates time/date and day-progress bar every second.
+  - `updateClock()` – updates time/date and day-progress bar using the user's device clock (runs on an interval in the browser).
   - `renderCalendar()` – builds the current month grid and highlights today.
 
 - **Settings & quick links**
@@ -241,6 +244,10 @@ Key areas:
   - `addToHistory(arr, value, max)` – keeps a rolling buffer.
   - `buildSparklinePath(values, width, height)` – returns `points` string for SVG `<polyline>`.
   - `fetchServerStats()` – polls the backend, updates history, and redraws the graphs and process list.
+
+- **Stocks**
+  - Ticker settings (symbols and visibility) are stored in `localStorage`.
+  - `fetchStocks()` – calls `/api/stocks` and renders a continuously scrolling, color-coded marquee at the bottom of the page.
 
 - **Initialization**
   - `init()`:
@@ -266,7 +273,7 @@ From your local project directory (e.g., `/Users/you/First Project`):
 2. **Install dependencies**:
 
    ```bash
-   pip install flask psutil requests
+  pip install flask psutil requests yfinance
    ```
 
 3. **Run the Flask app directly**:
@@ -319,7 +326,7 @@ Typical layout:
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
-   pip install flask psutil requests gunicorn
+  pip install flask psutil requests yfinance gunicorn
    ```
 
 3. **Test with Gunicorn manually**:

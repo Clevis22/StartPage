@@ -87,6 +87,10 @@
       </main>
     </div>
 
+    <div class="stock-ticker-shell">
+      <div id="stockTickerBar" class="stock-ticker-bar"></div>
+    </div>
+
     <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
       <div class="settings-panel-inner glass">
         <header class="settings-header">
@@ -110,6 +114,10 @@
             <span>Show Server Stats</span>
             <input type="checkbox" id="toggleServer" checked />
           </label>
+          <label class="setting-row">
+            <span>Show Stock Ticker</span>
+            <input type="checkbox" id="toggleStocks" checked />
+          </label>
         </div>
         <div class="settings-section">
           <h3>Quick Links</h3>
@@ -119,6 +127,14 @@
             <button class="icon-button" id="quickLinksSave">Save</button>
             <button class="icon-button" id="quickLinksReset">Reset</button>
           </div>
+        </div>
+        <div class="settings-section">
+          <h3>Stocks</h3>
+          <p class="settings-hint">Enter symbols separated by commas (e.g. AAPL, MSFT, TSLA)</p>
+          <label class="setting-row">
+            <span>Tickers</span>
+            <input type="text" id="stockTickersInput" style="flex: 1; margin-left: 8px;" />
+          </label>
         </div>
       </div>
     </aside>

@@ -70,6 +70,9 @@ const serverHistory = {
   mem: [],
 };
 
+// Stocks
+const DEFAULT_STOCK_TICKERS = ["AAPL", "MSFT", "GOOGL", "TSLA"];
+
 function addToHistory(arr, value, max = 60) {
   if (!Number.isFinite(value)) return;
   arr.push(value);
@@ -141,9 +144,12 @@ function initVisibilityToggles() {
   const serverEl = $("serverWidget");
   const weatherToggle = $("toggleWeather");
   const serverToggle = $("toggleServer");
+  const stocksToggle = $("toggleStocks");
+  const stockBar = $("stockTickerBar");
 
   const weatherVisible = loadSetting("showWeather", true);
   const serverVisible = loadSetting("showServer", true);
+  const stocksVisible = loadSetting("showStocks", true);
 
   if (weatherToggle && weatherEl) {
     weatherToggle.checked = !!weatherVisible;
@@ -162,6 +168,19 @@ function initVisibilityToggles() {
       const show = serverToggle.checked;
       serverEl.style.display = show ? "block" : "none";
       saveSetting("showServer", show);
+    });
+  }
+
+  if (stocksToggle && stockBar) {
+    stocksToggle.checked = !!stocksVisible;
+    stockBar.style.display = stocksVisible ? "block" : "none";
+    stocksToggle.addEventListener("change", () => {
+      const show = stocksToggle.checked;
+      stockBar.style.display = show ? "block" : "none";
+      saveSetting("showStocks", show);
+      if (show) {
+        fetchStocks();
+      }
     });
   }
 }
@@ -185,6 +204,33 @@ function initQuickLinksEditor() {
     saveSetting("quickLinks", DEFAULT_LINKS);
     textarea.value = serializeQuickLinks(DEFAULT_LINKS);
     renderQuickLinks();
+  });
+}
+
+function getStoredStockTickers() {
+  const raw = loadSetting("stockTickers", DEFAULT_STOCK_TICKERS);
+  if (!Array.isArray(raw)) return DEFAULT_STOCK_TICKERS;
+  const cleaned = raw
+    .map((s) => (s || "").toString().trim().toUpperCase())
+    .filter(Boolean);
+  return cleaned.length ? cleaned : DEFAULT_STOCK_TICKERS;
+}
+
+function initStockSettings() {
+  const input = $("stockTickersInput");
+  if (!input) return;
+
+  const tickers = getStoredStockTickers();
+  input.value = tickers.join(", ");
+
+  input.addEventListener("change", () => {
+    const parsed = (input.value || "")
+      .split(/[\s,]+/)
+      .map((t) => t.trim().toUpperCase())
+      .filter(Boolean);
+    const finalTickers = parsed.length ? parsed : DEFAULT_STOCK_TICKERS;
+    saveSetting("stockTickers", finalTickers);
+    fetchStocks();
   });
 }
 
@@ -296,6 +342,7 @@ async function fetchWeather() {
     // Build hourly forecast + graph for the rest of today
     let hourlyHtml = "";
     let hourlyTempsForGraph = [];
+    let hourlyWindForGraph = [];
     try {
       const hourly = data.hourly;
       if (hourly && Array.isArray(hourly.time)) {
@@ -305,10 +352,13 @@ async function fetchWeather() {
         const temps = hourly.temperature_2m || [];
         const pops = hourly.precipitation_probability || [];
         const codes = hourly.weathercode || [];
+        const winds = hourly.windspeed_10m || [];
 
         const items = [];
         let minTemp = Infinity;
         let maxTemp = -Infinity;
+        let minWind = Infinity;
+        let maxWind = -Infinity;
         let maxPopOverall = 0;
         for (let i = 0; i < times.length; i += 1) {
           const tStr = times[i];
@@ -319,6 +369,7 @@ async function fetchWeather() {
             hour: "numeric",
           });
           const ht = temps[i];
+          const hw = winds[i];
           const pop = pops[i];
           const hCode = Number(codes[i] ?? 0);
           const hType = mapWeatherCodeToType(hCode);
@@ -329,10 +380,17 @@ async function fetchWeather() {
             if (tempVal > maxTemp) maxTemp = tempVal;
           }
 
+          const windVal = Number(hw);
+          if (Number.isFinite(windVal)) {
+            if (windVal < minWind) minWind = windVal;
+            if (windVal > maxWind) maxWind = windVal;
+          }
+
           items.push({
             label: hourLabel,
             temp: tempRounded,
             rawTemp: tempVal,
+            rawWind: Number.isFinite(windVal) ? windVal : null,
             pop: Number.isFinite(pop) ? Math.round(pop) : null,
             type: hType,
           });
@@ -355,11 +413,32 @@ async function fetchWeather() {
             });
           }
 
+          // Build wind speed graph path (scaled between min and max winds)
+          if (!Number.isFinite(minWind) || !Number.isFinite(maxWind) || minWind === maxWind) {
+            hourlyWindForGraph = items.map(() => 50);
+          } else {
+            hourlyWindForGraph = items.map((it) => {
+              const v = Number(it.rawWind);
+              if (!Number.isFinite(v)) return 0;
+              const pct = ((v - minWind) / (maxWind - minWind)) * 100;
+              return Math.max(0, Math.min(100, pct));
+            });
+          }
+
           hourlyHtml = `
             <div class="weather-graph-row">
               <div class="weather-graph">
                 <svg class="weather-sparkline" viewBox="0 0 100 26" preserveAspectRatio="none">
                   <polyline points="${buildSparklinePath(hourlyTempsForGraph, 100, 26)}" class="weather-sparkline-line" />
+                  ${
+                    hourlyWindForGraph.length
+                      ? `<polyline points="${buildSparklinePath(
+                          hourlyWindForGraph,
+                          100,
+                          26,
+                        )}" class="weather-sparkline-line weather-sparkline-line-wind" />`
+                      : ""
+                  }
                 </svg>
               </div>
               <div class="weather-hourly">
@@ -410,6 +489,69 @@ async function fetchWeather() {
   } catch (e) {
     console.error(e);
     body.innerHTML = '<div class="muted">Unable to fetch weather</div>';
+  }
+}
+
+async function fetchStocks() {
+  const bar = $("stockTickerBar");
+  if (!bar) return;
+
+  const visible = loadSetting("showStocks", true);
+  if (!visible) {
+    bar.style.display = "none";
+    return;
+  }
+
+  const tickers = getStoredStockTickers();
+  if (!tickers.length) {
+    bar.innerHTML = '<span class="muted">Add stock tickers in settings</span>';
+    return;
+  }
+
+  bar.style.display = "block";
+  bar.innerHTML = '<span class="muted">Loading stocks…</span>';
+
+  try {
+    const params = new URLSearchParams();
+    params.set("tickers", tickers.join(","));
+    const res = await fetch(`/api/stocks?${params.toString()}`);
+    const data = await res.json();
+
+    if (!data.quotes || !Array.isArray(data.quotes) || !data.quotes.length) {
+      bar.innerHTML = '<span class="muted">No stock data available</span>';
+      return;
+    }
+
+    const itemsHtml = data.quotes
+      .map((q) => {
+        const symbol = (q.symbol || "").toString();
+        const price = Number(q.price || 0);
+        const pct = Number(q.change_percent || 0);
+        const cls = pct > 0 ? "stock-up" : pct < 0 ? "stock-down" : "stock-flat";
+        const pctText = `${pct > 0 ? "+" : ""}${pct.toFixed(2)}%`;
+        return `
+          <div class="stock-ticker-item ${cls}">
+            <span class="stock-symbol">${symbol}</span>
+            <span class="stock-price">${price.toFixed(2)}</span>
+            <span class="stock-change">${pctText}</span>
+          </div>
+        `;
+      })
+      .join("");
+
+    // Duplicate content inside a track so the CSS animation
+    // can loop seamlessly for a continuous marquee effect.
+    bar.innerHTML = `
+      <div class="stock-ticker-scroll">
+        <div class="stock-ticker-track">
+          ${itemsHtml}
+          ${itemsHtml}
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    console.error(e);
+    bar.innerHTML = '<span class="muted">Unable to fetch stocks</span>';
   }
 }
 
@@ -478,6 +620,20 @@ function buildSparklinePath(values, width, height) {
     pts.push(`${x},${y}`);
   }
   return pts.join(" ");
+}
+
+function scheduleClockUpdates() {
+  // Draw immediately, then align updates to the next minute boundary
+  updateClock();
+  const now = new Date();
+  const msToNextMinute =
+    (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+
+  setTimeout(() => {
+    updateClock();
+    // After hitting the next minute exactly, update every 60 seconds
+    setInterval(updateClock, 60 * 1000);
+  }, Math.max(0, msToNextMinute));
 }
 
 // Server stats (live graphs + processes)
@@ -600,14 +756,14 @@ function isProbablyUrl(text) {
 }
 
 function init() {
-  updateClock();
-  setInterval(updateClock, 30 * 1000);
+  scheduleClockUpdates();
 
   renderQuickLinks();
   initAccent();
   initVisibilityToggles();
   initSettingsPanel();
   initQuickLinksEditor();
+  initStockSettings();
   renderCalendar();
 
   const searchInput = $("searchInput");
@@ -639,8 +795,11 @@ function init() {
 
   fetchWeather();
   fetchServerStats();
+  fetchStocks();
   // Poll server stats periodically for live graphs
   setInterval(fetchServerStats, 5000);
+  // Refresh stocks every 5 minutes
+  setInterval(fetchStocks, 5 * 60 * 1000);
 }
 
 window.addEventListener("DOMContentLoaded", init);

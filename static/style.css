@@ -39,11 +39,95 @@ body {
   flex: 1;
   max-width: 1120px;
   width: 100%;
-  padding: 28px 28px 32px;
+  padding: 28px 28px 52px;
   min-height: 100vh;
   display: flex;
   align-items: stretch;
   justify-content: center;
+}
+
+.stock-ticker-shell {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 15;
+}
+
+.stock-ticker-bar {
+  max-width: 1120px;
+  width: 100%;
+  margin: 0 16px 10px;
+  border-radius: 0;
+  background: transparent;
+  border: none;
+  padding: 4px 0;
+  font-size: 12px;
+  color: #4dff4d;
+  overflow: hidden;
+  white-space: nowrap;
+  pointer-events: auto;
+}
+
+.stock-ticker-scroll {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.stock-ticker-track {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  white-space: nowrap;
+  animation: stock-ticker-scroll 30s linear infinite;
+}
+
+.stock-ticker-item {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 0 8px;
+  border-right: none;
+  font-family: "SF Mono", Menlo, Monaco, Consolas, monospace;
+}
+
+.stock-symbol {
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stock-price {
+  color: inherit;
+}
+
+.stock-change {
+  font-size: 11px;
+}
+
+.stock-up {
+  color: #34c759;
+}
+
+.stock-down {
+  color: #ff453a;
+}
+
+.stock-flat {
+  color: var(--text-muted);
+}
+
+@keyframes stock-ticker-scroll {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
 }
 
 .settings-fab {
@@ -395,6 +479,11 @@ body {
   fill: none;
   stroke: #34c759;
   stroke-width: 1.5;
+}
+
+.weather-sparkline-line-wind {
+  stroke: #ff453a;
+  stroke-width: 1.2;
 }
 
 .weather-hourly {
