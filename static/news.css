@@ -237,25 +237,33 @@
   color: var(--accent);
 }
 
-/* Feed item context menu (delete) */
+/* Feed item delete (compact, hover-reveal) */
 .nr-feed-btn .nr-feed-delete {
-  display: none;
-  padding: 2px 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin-left: 2px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   border-radius: 4px;
-  transition: color 0.12s, background 0.12s;
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
 }
 
 .nr-feed-btn:hover .nr-feed-delete {
-  display: flex;
+  opacity: 0.6;
 }
 
 .nr-feed-btn .nr-feed-delete:hover {
+  opacity: 1;
   color: #ff453a;
-  background: rgba(255, 69, 58, 0.12);
+  background: rgba(255, 69, 58, 0.1);
 }
 
 /* ── Main Content ── */
@@ -779,18 +787,25 @@
 }
 
 .nr-feed-manager-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  margin-left: 6px;
   border: none;
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 2px 4px;
   border-radius: 4px;
-  font-size: 14px;
-  transition: color 0.12s;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
 }
 
 .nr-feed-manager-delete:hover {
   color: #ff453a;
+  background: rgba(255, 69, 58, 0.1);
 }
 
 /* ── FAB for news link on index page ── */
@@ -820,6 +835,32 @@
 }
 
 /* ── Responsive ── */
+
+/* Hamburger: hide on desktop */
+.nr-hamburger {
+  display: none;
+}
+
+/* Mobile search toggle: hide on desktop */
+.nr-mobile-search-toggle {
+  display: none;
+}
+
+/* Mobile search bar: hide on desktop */
+.nr-mobile-search {
+  display: none;
+}
+
+/* Sidebar overlay: hide on desktop */
+.nr-sidebar-overlay {
+  display: none;
+}
+
+/* Back button (mobile reading pane) */
+.nr-back-btn {
+  display: none;
+}
+
 @media (max-width: 900px) {
   .nr-sidebar {
     width: 56px;
@@ -850,11 +891,167 @@
 }
 
 @media (max-width: 700px) {
+  /* ── Topbar mobile ── */
+  .nr-topbar {
+    height: 54px;
+    padding: 0 10px;
+    gap: 4px;
+  }
+
+  .nr-topbar-left {
+    min-width: auto;
+    gap: 6px;
+  }
+
+  .nr-logo {
+    font-size: 15px;
+  }
+
+  .nr-hamburger {
+    display: flex;
+    padding: 8px;
+  }
+
+  .nr-mobile-search-toggle {
+    display: flex;
+    padding: 8px;
+  }
+
+  /* Hide desktop search on mobile */
+  .nr-topbar-center {
+    display: none;
+  }
+
+  /* ── Mobile search bar ── */
+  .nr-mobile-search {
+    display: none;
+    padding: 8px 12px;
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .nr-mobile-search.nr-search-visible {
+    display: block;
+  }
+
+  .nr-mobile-search .nr-search-input {
+    font-size: 16px; /* prevent iOS zoom */
+    padding: 10px 10px 10px 34px;
+    border-radius: 10px;
+  }
+
+  .nr-mobile-search .nr-search-icon {
+    left: 12px;
+    width: 16px;
+    height: 16px;
+  }
+
+  /* ── Sidebar as drawer ── */
+  .nr-sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+    z-index: 90;
+  }
+
+  .nr-sidebar-overlay.nr-overlay-visible {
+    display: block;
+  }
+
+  .nr-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px !important;
+    min-width: 280px !important;
+    z-index: 95;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.3);
+    padding-top: 16px;
+  }
+
+  .nr-sidebar.nr-sidebar-open {
+    transform: translateX(0);
+  }
+
+  /* Show all sidebar content when open as drawer */
+  .nr-sidebar.nr-sidebar-open .nr-feed-btn span,
+  .nr-sidebar.nr-sidebar-open .nr-feed-count,
+  .nr-sidebar.nr-sidebar-open .nr-sidebar-label,
+  .nr-sidebar.nr-sidebar-open .nr-add-feed-btn span {
+    display: inline;
+  }
+
+  .nr-sidebar.nr-sidebar-open .nr-feed-btn {
+    justify-content: flex-start;
+    padding: 12px 14px;
+    font-size: 15px;
+  }
+
+  .nr-sidebar.nr-sidebar-open .nr-add-feed-btn {
+    justify-content: flex-start;
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .nr-sidebar.nr-sidebar-open .nr-feed-delete {
+    width: 28px;
+    height: 28px;
+    opacity: 0.6;
+  }
+
+  /* ── Article list full width ── */
   .nr-article-list {
     width: 100%;
     min-width: 100%;
   }
 
+  .nr-list-header {
+    padding: 12px;
+  }
+
+  .nr-list-header h2 {
+    font-size: 16px;
+  }
+
+  /* ── Article cards - better touch targets ── */
+  .nr-article-card {
+    padding: 14px 16px;
+    gap: 6px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .nr-article-card:active {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .nr-article-card-source {
+    font-size: 12px;
+  }
+
+  .nr-article-card-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.35;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+  }
+
+  .nr-article-card-snippet {
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  .nr-article-card-meta {
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  /* ── Reading pane full-screen overlay ── */
   .nr-reading-pane {
     display: none;
   }
@@ -862,27 +1059,140 @@
   .nr-reading-pane.nr-pane-visible {
     display: flex;
     position: fixed;
-    inset: 48px 0 0 0;
+    inset: 0;
     z-index: 50;
-  }
-
-  .nr-topbar-center {
-    display: none;
+    background: var(--bg);
   }
 
   .nr-reading-content {
     padding: 16px;
+    padding-top: 0;
+  }
+
+  .nr-reading-header {
+    position: sticky;
+    top: 0;
+    background: var(--bg);
+    z-index: 5;
+    padding: 12px 0;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-subtle);
   }
 
   .nr-back-btn {
     display: flex !important;
+    padding: 8px;
+    margin-left: -8px;
+  }
+
+  .nr-reading-title {
+    font-size: 20px;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+
+  .nr-reading-body {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  .nr-reading-text {
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  .nr-reading-hero {
+    border-radius: 8px;
+    max-height: 240px;
+  }
+
+  .nr-reading-actions .nr-icon-btn {
+    padding: 8px;
+  }
+
+  /* ── Touch-friendly icon buttons ── */
+  .nr-topbar-right .nr-icon-btn {
+    padding: 10px;
+    min-width: 40px;
+    min-height: 40px;
+  }
+
+  .nr-select {
+    font-size: 13px;
+    padding: 6px 10px;
+    min-height: 36px;
+  }
+
+  .nr-icon-btn-sm {
+    padding: 8px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+
+  /* ── Modal mobile ── */
+  .nr-modal {
+    width: calc(100vw - 24px);
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    border-radius: 14px;
+  }
+
+  .nr-modal-body {
+    padding: 16px;
+  }
+
+  .nr-form-input {
+    font-size: 16px; /* prevent iOS zoom */
+    padding: 10px 14px;
+  }
+
+  .nr-preset-chip {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  .nr-btn {
+    padding: 10px 20px;
+    font-size: 15px;
+  }
+
+  /* ── Grid view on mobile ── */
+  .nr-articles.nr-grid-view {
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 8px;
+  }
+
+  /* ── Settings panel mobile ── */
+  .settings-panel-inner {
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 0 !important;
+    height: 100%;
   }
 }
 
-/* Back button (mobile) */
-.nr-back-btn {
-  display: none;
-  margin-right: 8px;
+/* Extra small screens */
+@media (max-width: 380px) {
+  .nr-topbar {
+    padding: 0 6px;
+  }
+
+  .nr-logo {
+    font-size: 14px;
+  }
+
+  .nr-article-card {
+    padding: 12px 12px;
+  }
+
+  .nr-reading-content {
+    padding: 12px;
+  }
+
+  .nr-reading-title {
+    font-size: 18px;
+  }
 }
 
 /* Scrollbar styling */

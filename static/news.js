@@ -175,7 +175,7 @@
         (f) => `
       <div class="nr-feed-manager-item">
         <span class="nr-feed-manager-name" title="${escapeHtml(f.url)}">${escapeHtml(f.name)}</span>
-        <button class="nr-feed-manager-delete" data-id="${f.id}" title="Remove feed">✕</button>
+        <button class="nr-feed-manager-delete" data-id="${f.id}" title="Remove feed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
       </div>
     `
       )
@@ -208,8 +208,8 @@
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
         <span>${escapeHtml(f.name)}</span>
         <span class="nr-feed-count" id="nrCount_${f.id}">0</span>
-        <button class="nr-feed-delete nr-icon-btn-sm" data-delete="${f.id}" title="Remove feed">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        <button class="nr-feed-delete" data-delete="${f.id}" title="Remove feed">
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
         </button>
       </button>
     `
@@ -327,6 +327,36 @@
     });
   }
 
+  // ── Interleave articles from different sources (round-robin) ──
+  function interleaveBySource(list) {
+    // Group articles by feed, preserving each group's sort order
+    const groups = {};
+    const feedOrder = [];
+    for (const a of list) {
+      if (!groups[a.feedId]) {
+        groups[a.feedId] = [];
+        feedOrder.push(a.feedId);
+      }
+      groups[a.feedId].push(a);
+    }
+    if (feedOrder.length <= 1) return list;
+
+    // Round-robin: take one from each feed in turn
+    const result = [];
+    const pointers = {};
+    feedOrder.forEach((id) => (pointers[id] = 0));
+    let remaining = list.length;
+    while (remaining > 0) {
+      for (const id of feedOrder) {
+        if (pointers[id] < groups[id].length) {
+          result.push(groups[id][pointers[id]++]);
+          remaining--;
+        }
+      }
+    }
+    return result;
+  }
+
   // ── Render articles ──
   function getFilteredArticles() {
     let list = articles;
@@ -347,6 +377,11 @@
           a.feedName.toLowerCase().includes(q) ||
           (a.description && a.description.toLowerCase().includes(q))
       );
+    }
+
+    // Interleave sources when viewing all feeds
+    if (activeFeed === "all" || activeFeed === "saved") {
+      list = interleaveBySource(list);
     }
 
     return list;
@@ -700,7 +735,7 @@
       refreshBtn.addEventListener("click", refreshAllFeeds);
     }
 
-    // Search filter
+    // Search filter (desktop)
     const searchInput = $("nrSearch");
     if (searchInput) {
       let debounce = null;
@@ -708,8 +743,90 @@
         clearTimeout(debounce);
         debounce = setTimeout(() => {
           searchQuery = searchInput.value.trim();
+          // Sync mobile search
+          const mobileInput = $("nrMobileSearchInput");
+          if (mobileInput) mobileInput.value = searchQuery;
           renderArticles();
         }, 200);
+      });
+    }
+
+    // Search filter (mobile)
+    const mobileSearchInput = $("nrMobileSearchInput");
+    if (mobileSearchInput) {
+      let debounce = null;
+      mobileSearchInput.addEventListener("input", () => {
+        clearTimeout(debounce);
+        debounce = setTimeout(() => {
+          searchQuery = mobileSearchInput.value.trim();
+          // Sync desktop search
+          if (searchInput) searchInput.value = searchQuery;
+          renderArticles();
+        }, 200);
+      });
+    }
+
+    // Mobile search toggle
+    const mobileSearchToggle = $("nrMobileSearchToggle");
+    const mobileSearchBar = $("nrMobileSearch");
+    if (mobileSearchToggle && mobileSearchBar) {
+      mobileSearchToggle.addEventListener("click", () => {
+        mobileSearchBar.classList.toggle("nr-search-visible");
+        if (mobileSearchBar.classList.contains("nr-search-visible")) {
+          const input = $("nrMobileSearchInput");
+          if (input) input.focus();
+        }
+      });
+    }
+
+    // Hamburger sidebar toggle
+    const hamburger = $("nrHamburger");
+    const sidebar = $("nrSidebar");
+    const overlay = $("nrSidebarOverlay");
+
+    function openSidebar() {
+      if (sidebar) sidebar.classList.add("nr-sidebar-open");
+      if (overlay) overlay.classList.add("nr-overlay-visible");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeSidebar() {
+      if (sidebar) sidebar.classList.remove("nr-sidebar-open");
+      if (overlay) overlay.classList.remove("nr-overlay-visible");
+      document.body.style.overflow = "";
+    }
+
+    if (hamburger) {
+      hamburger.addEventListener("click", () => {
+        if (sidebar && sidebar.classList.contains("nr-sidebar-open")) {
+          closeSidebar();
+        } else {
+          openSidebar();
+        }
+      });
+    }
+
+    if (overlay) {
+      overlay.addEventListener("click", closeSidebar);
+    }
+
+    // Close sidebar when a feed is selected (mobile)
+    const origSetActiveFeed = setActiveFeed;
+    // We'll patch the sidebar feed click to also close sidebar on mobile
+    document.addEventListener("click", (e) => {
+      const feedBtn = e.target.closest(".nr-feed-btn[data-feed]");
+      if (feedBtn && window.innerWidth <= 700) {
+        setTimeout(closeSidebar, 150);
+      }
+    });
+
+    // Back button (mobile reading pane)
+    const backBtn = $("nrBackBtn");
+    if (backBtn) {
+      backBtn.addEventListener("click", () => {
+        showReadingEmpty();
+        selectedArticle = null;
+        renderArticles();
       });
     }
 
