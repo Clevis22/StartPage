@@ -148,6 +148,10 @@ body {
   backdrop-filter: blur(12px);
 }
 
+.settings-fab.fab-news {
+  right: 52px;
+}
+
 .settings-fab:hover {
   background: rgba(255, 255, 255, 0.1);
   color: var(--text-main);

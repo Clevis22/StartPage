@@ -4,10 +4,10 @@ import os
 import time
 from datetime import datetime
 
-from flask import Flask, jsonify, render_template, send_from_directory
+from flask import Flask, jsonify, render_template, request, send_from_directory
 import psutil
 import requests
-import xml.etree.ElementTree as ET
+import feedparser
 import yfinance as yf
 
 
@@ -17,6 +17,11 @@ app = Flask(__name__, static_folder="static", template_folder="templates")
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.route("/news")
+def news_page():
+    return render_template("news.html")
 
 
 @app.route("/api/server-stats")
@@ -116,44 +121,114 @@ def weather_proxy():
 
 @app.route("/api/news")
 def news_feed():
-    """Return a simple news feed from a public RSS source.
+    """Return a news feed from an RSS source using feedparser.
 
-    Uses Hacker News front page RSS by default. You can change the
-    NEWS_RSS_URL environment variable on your VPS to point to any
-    other RSS/Atom feed.
+    Accepts query params:
+      ?url=<rss-feed-url>  (defaults to Hacker News)
+      ?limit=<number>      (defaults to 20, max 50)
     """
-
-    feed_url = os.environ.get("NEWS_RSS_URL", "https://hnrss.org/frontpage")
+    feed_url = request.args.get("url") or os.environ.get(
+        "NEWS_RSS_URL", "https://hnrss.org/frontpage"
+    )
+    limit = min(int(request.args.get("limit", 20)), 50)
 
     try:
-        r = requests.get(feed_url, timeout=5)
-        r.raise_for_status()
+        parsed = feedparser.parse(
+            feed_url,
+            agent="StartPage/1.0",
+        )
     except Exception as e:  # noqa: BLE001
         return jsonify({"error": str(e)}), 502
 
-    try:
-        root = ET.fromstring(r.text)
-    except Exception as e:  # noqa: BLE001
-        return jsonify({"error": f"parse error: {e}"}), 502
+    if parsed.bozo and not parsed.entries:
+        err = str(getattr(parsed, "bozo_exception", "Unknown parse error"))
+        return jsonify({"error": f"Feed error: {err}"}), 502
+
+    feed_title = getattr(parsed.feed, "title", "") or ""
 
     items: list[dict] = []
+    for entry in parsed.entries[:limit]:
+        title = getattr(entry, "title", "(no title)")
+        link = getattr(entry, "link", "")
 
-    # RSS 2.0: channel/item
-    channel = root.find("channel")
-    entries = channel.findall("item") if channel is not None else []
+        # Published date – try multiple feedparser fields
+        published = ""
+        for attr in ("published", "updated", "created"):
+            val = getattr(entry, attr, None)
+            if val:
+                published = val
+                break
 
-    for item in entries[:10]:
-        title_el = item.find("title")
-        link_el = item.find("link")
-        date_el = item.find("pubDate")
+        # Description / summary – prefer content, fall back to summary
+        description = ""
+        if hasattr(entry, "content") and entry.content:
+            description = entry.content[0].get("value", "")[:2000]
+        elif hasattr(entry, "summary"):
+            description = (entry.summary or "")[:2000]
+        elif hasattr(entry, "description"):
+            description = (entry.description or "")[:2000]
 
-        title = title_el.text if title_el is not None else "(no title)"
-        link = link_el.text if link_el is not None else ""
-        published = date_el.text if date_el is not None else ""
+        # Media thumbnail (for images if available)
+        thumbnail = ""
+        if hasattr(entry, "media_thumbnail") and entry.media_thumbnail:
+            thumbnail = entry.media_thumbnail[0].get("url", "")
+        elif hasattr(entry, "media_content") and entry.media_content:
+            thumbnail = entry.media_content[0].get("url", "")
 
-        items.append({"title": title, "link": link, "published": published})
+        # Author
+        author = getattr(entry, "author", "")
 
-    return jsonify({"items": items})
+        items.append({
+            "title": title,
+            "link": link,
+            "published": published,
+            "description": description,
+            "thumbnail": thumbnail,
+            "author": author,
+        })
+
+    return jsonify({"items": items, "feed_title": feed_title})
+
+
+@app.route("/api/article")
+def fetch_article():
+    """Fetch and extract the full readable content of an article URL.
+
+    Uses newspaper3k to download and parse the article, returning
+    the cleaned text, top image, and authors.
+
+    Query params:
+      ?url=<article-url>
+    """
+    from newspaper import Article, ArticleException
+
+    url = request.args.get("url", "").strip()
+    if not url:
+        return jsonify({"error": "url parameter is required"}), 400
+
+    try:
+        article = Article(url)
+        article.download()
+        article.parse()
+    except ArticleException as e:
+        return jsonify({"error": str(e)}), 502
+    except Exception as e:  # noqa: BLE001
+        return jsonify({"error": str(e)}), 502
+
+    # Build HTML content from the text (preserve paragraphs)
+    text = article.text or ""
+    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+    html_content = "".join(f"<p>{p}</p>" for p in paragraphs) if paragraphs else ""
+
+    return jsonify({
+        "title": article.title or "",
+        "authors": article.authors or [],
+        "publish_date": article.publish_date.isoformat() if article.publish_date else "",
+        "top_image": article.top_image or "",
+        "text": text,
+        "html": html_content,
+        "source_url": url,
+    })
 
 
 @app.route("/api/stocks")

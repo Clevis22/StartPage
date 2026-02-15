@@ -3,41 +3,149 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>News</title>
+    <title>News Reader</title>
     <link rel="stylesheet" href="/static/style.css" />
+    <link rel="stylesheet" href="/static/news.css" />
   </head>
-  <body>
-    <button id="newsPageLink" class="settings-fab fab-left" aria-label="Go to home">⌂</button>
-    <button id="settingsToggle" class="settings-fab" aria-label="Open settings">⚙</button>
+  <body class="news-page-body">
 
-    <div class="page page-news">
-      <main class="news-layout">
-        <header class="news-header glass">
-          <div class="news-header-main">
-            <div class="brand-text">Start Page</div>
-            <h1 class="news-title-main">News</h1>
-          </div>
-          <div class="news-header-side">
-            <div class="news-topics" id="newsTopicsBar"></div>
-          </div>
-        </header>
+    <!-- Top bar -->
+    <header class="nr-topbar">
+      <div class="nr-topbar-left">
+        <a href="/" class="nr-home-link" aria-label="Home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </a>
+        <span class="nr-logo">News Reader</span>
+      </div>
+      <div class="nr-topbar-center">
+        <div class="nr-search-wrap">
+          <svg class="nr-search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="nrSearch" class="nr-search-input" placeholder="Filter articles…" autocomplete="off" />
+        </div>
+      </div>
+      <div class="nr-topbar-right">
+        <button class="nr-icon-btn" id="nrRefreshAll" aria-label="Refresh all feeds" title="Refresh all">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="nr-icon-btn" id="nrSettingsToggle" aria-label="Settings" title="Settings">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        </button>
+      </div>
+    </header>
 
-        <section class="news-content glass">
-          <div class="news-content-header">
-            <h2 class="news-content-title">Latest stories</h2>
-            <button class="icon-button" id="newsRefresh" aria-label="Refresh news">↻</button>
+    <div class="nr-app">
+      <!-- Sidebar: feeds list -->
+      <aside class="nr-sidebar" id="nrSidebar">
+        <nav class="nr-feed-nav">
+          <button class="nr-feed-btn nr-feed-active" data-feed="all">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+            <span>All Feeds</span>
+            <span class="nr-feed-count" id="nrCountAll">0</span>
+          </button>
+          <button class="nr-feed-btn" data-feed="saved">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span>Saved</span>
+            <span class="nr-feed-count" id="nrCountSaved">0</span>
+          </button>
+          <div class="nr-sidebar-divider"></div>
+          <div class="nr-sidebar-label">FEEDS</div>
+          <div id="nrFeedList" class="nr-feed-list"></div>
+          <button class="nr-add-feed-btn" id="nrAddFeed">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            <span>Add Feed</span>
+          </button>
+        </nav>
+      </aside>
+
+      <!-- Main content: article list + reading pane -->
+      <main class="nr-main">
+        <!-- Article list -->
+        <section class="nr-article-list" id="nrArticleList">
+          <div class="nr-list-header">
+            <h2 id="nrCurrentFeedTitle">All Feeds</h2>
+            <div class="nr-list-actions">
+              <select id="nrSortSelect" class="nr-select" title="Sort articles">
+                <option value="newest">Newest first</option>
+                <option value="oldest">Oldest first</option>
+              </select>
+              <button class="nr-icon-btn nr-icon-btn-sm" id="nrViewToggle" aria-label="Toggle view" title="Toggle view">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+              </button>
+            </div>
           </div>
-          <div id="newsBody" class="news-body">
-            <div class="muted">Loading news…</div>
+          <div class="nr-articles" id="nrArticles">
+            <div class="nr-loading">Loading feeds…</div>
           </div>
+        </section>
+
+        <!-- Reading pane -->
+        <section class="nr-reading-pane" id="nrReadingPane">
+          <div class="nr-reading-empty" id="nrReadingEmpty">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" opacity="0.3"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+            <p>Select an article to read</p>
+          </div>
+          <article class="nr-reading-content" id="nrReadingContent" style="display:none;">
+            <div class="nr-reading-header">
+              <div class="nr-reading-meta">
+                <span class="nr-reading-source" id="nrReadingSource"></span>
+                <span class="nr-reading-date" id="nrReadingDate"></span>
+              </div>
+              <div class="nr-reading-actions">
+                <button class="nr-icon-btn nr-icon-btn-sm" id="nrBookmarkArticle" aria-label="Save article" title="Save">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+                </button>
+                <a class="nr-icon-btn nr-icon-btn-sm" id="nrOpenExternal" href="#" target="_blank" rel="noopener noreferrer" aria-label="Open in new tab" title="Open in new tab">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                </a>
+              </div>
+            </div>
+            <h1 class="nr-reading-title" id="nrReadingTitle"></h1>
+            <div class="nr-reading-body" id="nrReadingBody"></div>
+          </article>
         </section>
       </main>
     </div>
 
+    <!-- Add feed modal -->
+    <div class="nr-modal-overlay" id="nrModalOverlay" style="display:none;">
+      <div class="nr-modal">
+        <header class="nr-modal-header">
+          <h3>Add RSS Feed</h3>
+          <button class="nr-icon-btn nr-icon-btn-sm" id="nrModalClose" aria-label="Close">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </header>
+        <div class="nr-modal-body">
+          <label class="nr-form-label">Feed Name</label>
+          <input type="text" id="nrFeedName" class="nr-form-input" placeholder="e.g. Hacker News" />
+          <label class="nr-form-label">RSS URL</label>
+          <input type="text" id="nrFeedUrl" class="nr-form-input" placeholder="https://hnrss.org/frontpage" />
+          <div class="nr-form-presets">
+            <span class="nr-form-label">Quick add:</span>
+            <div class="nr-preset-chips">
+              <button class="nr-preset-chip" data-name="Hacker News" data-url="https://hnrss.org/frontpage">Hacker News</button>
+              <button class="nr-preset-chip" data-name="TechCrunch" data-url="https://techcrunch.com/feed/">TechCrunch</button>
+              <button class="nr-preset-chip" data-name="BBC World" data-url="https://feeds.bbci.co.uk/news/world/rss.xml">BBC World</button>
+              <button class="nr-preset-chip" data-name="Reuters" data-url="https://feeds.reuters.com/reuters/topNews">Reuters</button>
+              <button class="nr-preset-chip" data-name="The Verge" data-url="https://www.theverge.com/rss/index.xml">The Verge</button>
+              <button class="nr-preset-chip" data-name="Ars Technica" data-url="https://feeds.arstechnica.com/arstechnica/index">Ars Technica</button>
+              <button class="nr-preset-chip" data-name="ESPN" data-url="https://www.espn.com/espn/rss/news">ESPN</button>
+              <button class="nr-preset-chip" data-name="NYT Top" data-url="https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml">NYT Top</button>
+            </div>
+          </div>
+        </div>
+        <footer class="nr-modal-footer">
+          <button class="nr-btn nr-btn-secondary" id="nrModalCancel">Cancel</button>
+          <button class="nr-btn nr-btn-primary" id="nrModalSave">Add Feed</button>
+        </footer>
+      </div>
+    </div>
+
+    <!-- Settings panel -->
     <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
       <div class="settings-panel-inner glass">
         <header class="settings-header">
-          <span>Preferences</span>
+          <span>Settings</span>
           <button class="icon-button" id="settingsClose" aria-label="Close settings">✕</button>
         </header>
         <div class="settings-section">
@@ -48,26 +156,42 @@
           </label>
         </div>
         <div class="settings-section">
-          <h3>News</h3>
-          <p class="settings-hint">Topics separated by commas (e.g. Tech, World, Finance)</p>
+          <h3>Reading</h3>
           <label class="setting-row">
-            <span>Topics</span>
-            <input type="text" id="newsTopicsInput" style="flex: 1; margin-left: 8px;" />
+            <span>Auto-refresh (min)</span>
+            <select id="nrAutoRefresh" class="nr-select">
+              <option value="0">Off</option>
+              <option value="5" selected>5</option>
+              <option value="10">10</option>
+              <option value="15">15</option>
+              <option value="30">30</option>
+            </select>
           </label>
-          <p class="settings-hint">Feeds: one per line as Topic,https://rss-url</p>
-          <textarea id="newsFeedsEditor" class="settings-textarea" rows="3"></textarea>
+          <label class="setting-row">
+            <span>Articles per feed</span>
+            <select id="nrArticleLimit" class="nr-select">
+              <option value="10">10</option>
+              <option value="20" selected>20</option>
+              <option value="30">30</option>
+              <option value="50">50</option>
+            </select>
+          </label>
         </div>
         <div class="settings-section">
-          <h3>Stocks</h3>
-          <p class="settings-hint">Enter symbols separated by commas (e.g. AAPL, MSFT, TSLA)</p>
-          <label class="setting-row">
-            <span>Tickers</span>
-            <input type="text" id="stockTickersInput" style="flex: 1; margin-left: 8px;" />
-          </label>
+          <h3>Manage Feeds</h3>
+          <div id="nrFeedManager" class="nr-feed-manager"></div>
+        </div>
+        <div class="settings-section">
+          <h3>Data</h3>
+          <div class="settings-buttons">
+            <button class="nr-btn nr-btn-secondary" id="nrExportFeeds">Export Feeds</button>
+            <button class="nr-btn nr-btn-secondary" id="nrImportFeeds">Import Feeds</button>
+          </div>
+          <input type="file" id="nrImportFile" accept=".json" style="display:none;" />
         </div>
       </div>
     </aside>
 
-    <script src="/static/app.js"></script>
+    <script src="/static/news.js"></script>
   </body>
 </html>
