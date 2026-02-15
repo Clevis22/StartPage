@@ -8,9 +8,33 @@
 
   // ── Defaults ──
   const DEFAULT_FEEDS = [
-    { id: "hn", name: "Hacker News", url: "https://hnrss.org/frontpage" },
-    { id: "bbc", name: "BBC World", url: "https://feeds.bbci.co.uk/news/world/rss.xml" },
+    { id: "hn", name: "Hacker News", url: "https://hnrss.org/frontpage", topic: "Tech" },
+    { id: "bbc", name: "BBC World", url: "https://feeds.bbci.co.uk/news/world/rss.xml", topic: "News" },
   ];
+
+  // ── Topic helpers ──
+  let collapsedTopics = []; // persisted topic names that are collapsed
+
+  function getTopics() {
+    const map = {};
+    for (const f of feeds) {
+      const t = f.topic || "Uncategorized";
+      if (!map[t]) map[t] = [];
+      map[t].push(f);
+    }
+    // Sort: alphabetical, but "Uncategorized" always last
+    return Object.keys(map)
+      .sort((a, b) => {
+        if (a === "Uncategorized") return 1;
+        if (b === "Uncategorized") return -1;
+        return a.localeCompare(b);
+      })
+      .map((name) => ({ name, feeds: map[name] }));
+  }
+
+  function getTopicFeedIds(topicName) {
+    return feeds.filter((f) => (f.topic || "Uncategorized") === topicName).map((f) => f.id);
+  }
 
   // ── State ──
   let feeds = [];
@@ -53,6 +77,17 @@
     readArticles = load("read", []);
     gridView = load("gridView", false);
     sortOrder = load("sortOrder", "newest");
+    collapsedTopics = load("collapsedTopics", []);
+
+    // Migrate feeds that lack a topic field
+    let migrated = false;
+    feeds.forEach((f) => {
+      if (!f.topic) {
+        f.topic = "Uncategorized";
+        migrated = true;
+      }
+    });
+    if (migrated) save("feeds", feeds);
 
     // Accent color
     const accent = load("accent", null);
@@ -170,17 +205,36 @@
       container.innerHTML = '<div class="muted" style="font-size:12px;padding:4px;">No feeds configured</div>';
       return;
     }
-    container.innerHTML = feeds
+
+    const topics = getTopics();
+    container.innerHTML = topics
       .map(
-        (f) => `
-      <div class="nr-feed-manager-item">
-        <span class="nr-feed-manager-name" title="${escapeHtml(f.url)}">${escapeHtml(f.name)}</span>
-        <button class="nr-feed-manager-delete" data-id="${f.id}" title="Remove feed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
-      </div>
-    `
+        (topic) => `
+        <div class="nr-fm-topic-group">
+          <div class="nr-fm-topic-label">${escapeHtml(topic.name)}</div>
+          ${topic.feeds
+            .map(
+              (f) => `
+            <div class="nr-feed-manager-item">
+              <span class="nr-feed-manager-name" title="${escapeHtml(f.url)}">${escapeHtml(f.name)}</span>
+              <select class="nr-fm-topic-select" data-feed-id="${f.id}" title="Change topic">
+                ${[...new Set(feeds.map((x) => x.topic || "Uncategorized"))]
+                  .sort()
+                  .map((t) => `<option value="${escapeHtml(t)}"${t === (f.topic || "Uncategorized") ? " selected" : ""}>${escapeHtml(t)}</option>`)
+                  .join("")}
+                <option value="__new__">+ New topic…</option>
+              </select>
+              <button class="nr-feed-manager-delete" data-id="${f.id}" title="Remove feed"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      `
       )
       .join("");
 
+    // Delete handlers
     container.querySelectorAll(".nr-feed-manager-delete").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;
@@ -194,6 +248,34 @@
         refreshAllFeeds();
       });
     });
+
+    // Topic change handlers
+    container.querySelectorAll(".nr-fm-topic-select").forEach((sel) => {
+      sel.addEventListener("change", () => {
+        const feedId = sel.dataset.feedId;
+        let newTopic = sel.value;
+
+        if (newTopic === "__new__") {
+          newTopic = prompt("Enter new topic name:");
+          if (!newTopic || !newTopic.trim()) {
+            // Reset selection
+            const feed = feeds.find((f) => f.id === feedId);
+            sel.value = feed ? feed.topic || "Uncategorized" : "Uncategorized";
+            return;
+          }
+          newTopic = newTopic.trim();
+        }
+
+        const feed = feeds.find((f) => f.id === feedId);
+        if (feed) {
+          feed.topic = newTopic;
+          save("feeds", feeds);
+          renderSidebar();
+          renderFeedManager();
+          updateCounts();
+        }
+      });
+    });
   }
 
   // ── Sidebar ──
@@ -201,25 +283,71 @@
     const list = $("nrFeedList");
     if (!list) return;
 
-    list.innerHTML = feeds
-      .map(
-        (f) => `
-      <button class="nr-feed-btn${activeFeed === f.id ? " nr-feed-active" : ""}" data-feed="${f.id}">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-        <span>${escapeHtml(f.name)}</span>
-        <span class="nr-feed-count" id="nrCount_${f.id}">0</span>
-        <button class="nr-feed-delete" data-delete="${f.id}" title="Remove feed">
-          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-        </button>
-      </button>
-    `
-      )
+    const topics = getTopics();
+
+    list.innerHTML = topics
+      .map((topic) => {
+        const isCollapsed = collapsedTopics.includes(topic.name);
+        const isTopicActive = activeFeed === "topic:" + topic.name;
+        const chevronSvg = `<svg class="nr-topic-chevron${isCollapsed ? "" : " nr-topic-chevron-open"}" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>`;
+
+        const feedButtons = topic.feeds
+          .map(
+            (f) => `
+          <button class="nr-feed-btn${activeFeed === f.id ? " nr-feed-active" : ""}" data-feed="${f.id}">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+            <span>${escapeHtml(f.name)}</span>
+            <span class="nr-feed-count" id="nrCount_${f.id}">0</span>
+            <button class="nr-feed-delete" data-delete="${f.id}" title="Remove feed">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </button>
+        `
+          )
+          .join("");
+
+        return `
+        <div class="nr-topic-group" data-topic="${escapeHtml(topic.name)}">
+          <button class="nr-topic-header${isTopicActive ? " nr-topic-active" : ""}" data-topic-name="${escapeHtml(topic.name)}">
+            ${chevronSvg}
+            <span class="nr-topic-name">${escapeHtml(topic.name)}</span>
+            <span class="nr-feed-count nr-topic-count nr-topic-filter" id="nrTopicCount_${topic.name.replace(/\s+/g, "_")}" title="Show all ${escapeHtml(topic.name)} articles">0</span>
+          </button>
+          <div class="nr-topic-feeds${isCollapsed ? " nr-topic-collapsed" : ""}">
+            ${feedButtons}
+          </div>
+        </div>`;
+      })
       .join("");
 
-    // Sidebar click handlers
-    document.querySelectorAll(".nr-feed-btn[data-feed]").forEach((btn) => {
+    // Topic header click handlers
+    list.querySelectorAll(".nr-topic-header").forEach((header) => {
+      header.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const topicName = header.dataset.topicName;
+        const chevron = header.querySelector(".nr-topic-chevron");
+        const feedsDiv = header.nextElementSibling;
+
+        // Clicking the chevron arrow → collapse/expand
+        if (e.target === chevron || e.target.closest(".nr-topic-chevron")) {
+          feedsDiv.classList.toggle("nr-topic-collapsed");
+          chevron.classList.toggle("nr-topic-chevron-open");
+          if (feedsDiv.classList.contains("nr-topic-collapsed")) {
+            if (!collapsedTopics.includes(topicName)) collapsedTopics.push(topicName);
+          } else {
+            collapsedTopics = collapsedTopics.filter((t) => t !== topicName);
+          }
+          save("collapsedTopics", collapsedTopics);
+        } else {
+          // Clicking topic name or count → show all articles in this topic
+          setActiveFeed("topic:" + topicName);
+        }
+      });
+    });
+
+    // Sidebar feed click handlers
+    list.querySelectorAll(".nr-feed-btn[data-feed]").forEach((btn) => {
       btn.addEventListener("click", (e) => {
-        // Don't activate if clicking delete
         if (e.target.closest("[data-delete]")) return;
         setActiveFeed(btn.dataset.feed);
       });
@@ -234,7 +362,6 @@
         save("feeds", feeds);
         renderSidebar();
         if (activeFeed === id) setActiveFeed("all");
-        // Remove articles from deleted feed
         articles = articles.filter((a) => a.feedId !== id);
         renderArticles();
         updateCounts();
@@ -246,16 +373,37 @@
     activeFeed = id;
     selectedArticle = null;
 
-    // Update active states
+    // Update active states on feed buttons
     document.querySelectorAll(".nr-feed-btn").forEach((btn) => {
       btn.classList.toggle("nr-feed-active", btn.dataset.feed === id);
     });
+
+    // Update active state on topic headers
+    document.querySelectorAll(".nr-topic-header").forEach((header) => {
+      header.classList.toggle("nr-topic-active", id === "topic:" + header.dataset.topicName);
+    });
+
+    // If a topic is selected, also highlight its feeds
+    if (id.startsWith("topic:")) {
+      const topicName = id.slice(6);
+      const feedIds = getTopicFeedIds(topicName);
+      document.querySelectorAll(".nr-feed-btn[data-feed]").forEach((btn) => {
+        if (feedIds.includes(btn.dataset.feed)) {
+          btn.classList.add("nr-feed-in-topic");
+        } else {
+          btn.classList.remove("nr-feed-in-topic");
+        }
+      });
+    } else {
+      document.querySelectorAll(".nr-feed-in-topic").forEach((el) => el.classList.remove("nr-feed-in-topic"));
+    }
 
     // Update title
     const titleEl = $("nrCurrentFeedTitle");
     if (titleEl) {
       if (id === "all") titleEl.textContent = "All Feeds";
       else if (id === "saved") titleEl.textContent = "Saved Articles";
+      else if (id.startsWith("topic:")) titleEl.textContent = id.slice(6);
       else {
         const feed = feeds.find((f) => f.id === id);
         titleEl.textContent = feed ? feed.name : "Feed";
@@ -361,9 +509,13 @@
   function getFilteredArticles() {
     let list = articles;
 
-    // Filter by feed
+    // Filter by feed or topic
     if (activeFeed === "saved") {
       list = list.filter((a) => savedArticles.includes(a.link));
+    } else if (activeFeed.startsWith("topic:")) {
+      const topicName = activeFeed.slice(6);
+      const feedIds = getTopicFeedIds(topicName);
+      list = list.filter((a) => feedIds.includes(a.feedId));
     } else if (activeFeed !== "all") {
       list = list.filter((a) => a.feedId === activeFeed);
     }
@@ -379,8 +531,8 @@
       );
     }
 
-    // Interleave sources when viewing all feeds
-    if (activeFeed === "all" || activeFeed === "saved") {
+    // Interleave sources when viewing all feeds or a topic
+    if (activeFeed === "all" || activeFeed === "saved" || activeFeed.startsWith("topic:")) {
       list = interleaveBySource(list);
     }
 
@@ -617,6 +769,16 @@
       const el = $("nrCount_" + f.id);
       if (el) el.textContent = articles.filter((a) => a.feedId === f.id).length;
     });
+
+    // Topic counts
+    const topics = getTopics();
+    topics.forEach((topic) => {
+      const el = $("nrTopicCount_" + topic.name.replace(/\s+/g, "_"));
+      if (el) {
+        const feedIds = topic.feeds.map((f) => f.id);
+        el.textContent = articles.filter((a) => feedIds.includes(a.feedId)).length;
+      }
+    });
   }
 
   // ── Add Feed Modal ──
@@ -628,12 +790,22 @@
     const saveBtn = $("nrModalSave");
     const nameInput = $("nrFeedName");
     const urlInput = $("nrFeedUrl");
+    const topicInput = $("nrFeedTopic");
+    const topicList = $("nrTopicSuggestions");
 
     if (!overlay || !addBtn) return;
+
+    function populateTopicSuggestions() {
+      if (!topicList) return;
+      const topics = [...new Set(feeds.map((f) => f.topic || "Uncategorized"))].sort();
+      topicList.innerHTML = topics.map((t) => `<option value="${escapeHtml(t)}">`).join("");
+    }
 
     function openModal() {
       if (nameInput) nameInput.value = "";
       if (urlInput) urlInput.value = "";
+      if (topicInput) topicInput.value = "";
+      populateTopicSuggestions();
       overlay.style.display = "flex";
     }
 
@@ -654,6 +826,7 @@
       chip.addEventListener("click", () => {
         if (nameInput) nameInput.value = chip.dataset.name;
         if (urlInput) urlInput.value = chip.dataset.url;
+        if (topicInput && chip.dataset.topic) topicInput.value = chip.dataset.topic;
       });
     });
 
@@ -662,6 +835,7 @@
       saveBtn.addEventListener("click", async () => {
         const name = (nameInput?.value || "").trim();
         const url = (urlInput?.value || "").trim();
+        const topic = (topicInput?.value || "").trim() || "Uncategorized";
 
         if (!name || !url) {
           alert("Please enter both a name and URL");
@@ -674,7 +848,7 @@
           return;
         }
 
-        const newFeed = { id: generateId(), name, url };
+        const newFeed = { id: generateId(), name, url, topic };
         feeds.push(newFeed);
         save("feeds", feeds);
 

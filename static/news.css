@@ -217,6 +217,124 @@
   gap: 1px;
 }
 
+/* ── Topic Groups ── */
+.nr-topic-group {
+  margin-bottom: 2px;
+}
+
+.nr-topic-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  border-radius: 6px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.nr-topic-header:hover {
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-main);
+}
+
+.nr-topic-header.nr-topic-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nr-topic-chevron {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  transform: rotate(0deg);
+}
+
+.nr-topic-chevron-open {
+  transform: rotate(90deg);
+}
+
+.nr-topic-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.nr-topic-count {
+  font-size: 9px;
+}
+
+.nr-topic-filter {
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.nr-topic-filter:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.nr-topic-feeds {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 6px;
+  overflow: hidden;
+  max-height: 600px;
+  transition: max-height 0.25s ease, opacity 0.2s ease;
+  opacity: 1;
+}
+
+.nr-topic-collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.nr-feed-in-topic {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* ── Feed Manager Topic Groups ── */
+.nr-fm-topic-group {
+  margin-bottom: 8px;
+}
+
+.nr-fm-topic-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 4px 8px 2px;
+}
+
+.nr-fm-topic-select {
+  font-size: 11px;
+  padding: 2px 4px;
+  margin-left: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  max-width: 100px;
+}
+
+.nr-fm-topic-select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 .nr-add-feed-btn {
   display: flex;
   align-items: center;

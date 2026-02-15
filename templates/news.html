@@ -56,7 +56,6 @@
             <span class="nr-feed-count" id="nrCountSaved">0</span>
           </button>
           <div class="nr-sidebar-divider"></div>
-          <div class="nr-sidebar-label">FEEDS</div>
           <div id="nrFeedList" class="nr-feed-list"></div>
           <button class="nr-add-feed-btn" id="nrAddFeed">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
@@ -139,17 +138,20 @@
           <input type="text" id="nrFeedName" class="nr-form-input" placeholder="e.g. Hacker News" />
           <label class="nr-form-label">RSS URL</label>
           <input type="text" id="nrFeedUrl" class="nr-form-input" placeholder="https://hnrss.org/frontpage" />
+          <label class="nr-form-label">Topic</label>
+          <input type="text" id="nrFeedTopic" class="nr-form-input" placeholder="e.g. Tech, News, Sports" list="nrTopicSuggestions" autocomplete="off" />
+          <datalist id="nrTopicSuggestions"></datalist>
           <div class="nr-form-presets">
             <span class="nr-form-label">Quick add:</span>
             <div class="nr-preset-chips">
-              <button class="nr-preset-chip" data-name="Hacker News" data-url="https://hnrss.org/frontpage">Hacker News</button>
-              <button class="nr-preset-chip" data-name="TechCrunch" data-url="https://techcrunch.com/feed/">TechCrunch</button>
-              <button class="nr-preset-chip" data-name="BBC World" data-url="https://feeds.bbci.co.uk/news/world/rss.xml">BBC World</button>
-              <button class="nr-preset-chip" data-name="Reuters" data-url="https://feeds.reuters.com/reuters/topNews">Reuters</button>
-              <button class="nr-preset-chip" data-name="The Verge" data-url="https://www.theverge.com/rss/index.xml">The Verge</button>
-              <button class="nr-preset-chip" data-name="Ars Technica" data-url="https://feeds.arstechnica.com/arstechnica/index">Ars Technica</button>
-              <button class="nr-preset-chip" data-name="ESPN" data-url="https://www.espn.com/espn/rss/news">ESPN</button>
-              <button class="nr-preset-chip" data-name="NYT Top" data-url="https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml">NYT Top</button>
+              <button class="nr-preset-chip" data-name="Hacker News" data-url="https://hnrss.org/frontpage" data-topic="Tech">Hacker News</button>
+              <button class="nr-preset-chip" data-name="TechCrunch" data-url="https://techcrunch.com/feed/" data-topic="Tech">TechCrunch</button>
+              <button class="nr-preset-chip" data-name="BBC World" data-url="https://feeds.bbci.co.uk/news/world/rss.xml" data-topic="News">BBC World</button>
+              <button class="nr-preset-chip" data-name="Reuters" data-url="https://feeds.reuters.com/reuters/topNews" data-topic="News">Reuters</button>
+              <button class="nr-preset-chip" data-name="The Verge" data-url="https://www.theverge.com/rss/index.xml" data-topic="Tech">The Verge</button>
+              <button class="nr-preset-chip" data-name="Ars Technica" data-url="https://feeds.arstechnica.com/arstechnica/index" data-topic="Tech">Ars Technica</button>
+              <button class="nr-preset-chip" data-name="ESPN" data-url="https://www.espn.com/espn/rss/news" data-topic="Sports">ESPN</button>
+              <button class="nr-preset-chip" data-name="NYT Top" data-url="https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml" data-topic="News">NYT Top</button>
             </div>
           </div>
         </div>
