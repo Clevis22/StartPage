@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>News</title>
+    <link rel="stylesheet" href="/static/style.css" />
+  </head>
+  <body>
+    <button id="newsPageLink" class="settings-fab fab-left" aria-label="Go to home">⌂</button>
+    <button id="settingsToggle" class="settings-fab" aria-label="Open settings">⚙</button>
+
+    <div class="page page-news">
+      <main class="news-layout">
+        <header class="news-header glass">
+          <div class="news-header-main">
+            <div class="brand-text">Start Page</div>
+            <h1 class="news-title-main">News</h1>
+          </div>
+          <div class="news-header-side">
+            <div class="news-topics" id="newsTopicsBar"></div>
+          </div>
+        </header>
+
+        <section class="news-content glass">
+          <div class="news-content-header">
+            <h2 class="news-content-title">Latest stories</h2>
+            <button class="icon-button" id="newsRefresh" aria-label="Refresh news">↻</button>
+          </div>
+          <div id="newsBody" class="news-body">
+            <div class="muted">Loading news…</div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <aside class="settings-panel" id="settingsPanel" aria-hidden="true">
+      <div class="settings-panel-inner glass">
+        <header class="settings-header">
+          <span>Preferences</span>
+          <button class="icon-button" id="settingsClose" aria-label="Close settings">✕</button>
+        </header>
+        <div class="settings-section">
+          <h3>Appearance</h3>
+          <label class="setting-row">
+            <span>Accent color</span>
+            <input type="color" id="accentColor" />
+          </label>
+        </div>
+        <div class="settings-section">
+          <h3>News</h3>
+          <p class="settings-hint">Topics separated by commas (e.g. Tech, World, Finance)</p>
+          <label class="setting-row">
+            <span>Topics</span>
+            <input type="text" id="newsTopicsInput" style="flex: 1; margin-left: 8px;" />
+          </label>
+          <p class="settings-hint">Feeds: one per line as Topic,https://rss-url</p>
+          <textarea id="newsFeedsEditor" class="settings-textarea" rows="3"></textarea>
+        </div>
+        <div class="settings-section">
+          <h3>Stocks</h3>
+          <p class="settings-hint">Enter symbols separated by commas (e.g. AAPL, MSFT, TSLA)</p>
+          <label class="setting-row">
+            <span>Tickers</span>
+            <input type="text" id="stockTickersInput" style="flex: 1; margin-left: 8px;" />
+          </label>
+        </div>
+      </div>
+    </aside>
+
+    <script src="/static/app.js"></script>
+  </body>
+</html>
