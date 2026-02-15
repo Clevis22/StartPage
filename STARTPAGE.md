@@ -25,13 +25,14 @@ This document covers how the app works, how it is deployed on your Ubuntu VPS, a
     - `GET /` – renders the start page HTML
     - `GET /api/weather` – proxy to Open‑Meteo
     - `GET /api/server-stats` – server metrics via `psutil`
-    - `GET /api/news` – RSS → JSON (currently unused in UI; optional)
+    - `GET /api/news` – RSS → JSON feed parser for the news reader
+    - `GET /api/article` – full article content extraction (newspaper3k + readability fallback)
     - `GET /api/stocks` – stock quotes via `yfinance`
     - `GET /favicon.ico` – serves favicon from `static/`
 - **Frontend**
-  - Template: `templates/index.html`
-  - Styles: `static/style.css`
-  - Logic: `static/app.js`
+  - Template: `templates/index.html` (dashboard), `templates/news.html` (news reader)
+  - Styles: `static/style.css`, `static/news.css`
+  - Logic: `static/app.js`, `static/news.js`
   - Uses browser features:
     - `navigator.geolocation` for weather location (requires HTTPS or localhost)
     - `localStorage` for settings (accent color, widget visibility, quick links)
@@ -39,7 +40,7 @@ This document covers how the app works, how it is deployed on your Ubuntu VPS, a
   - **Weather:** Open‑Meteo `v1/forecast` endpoint
   - **Server stats:** `psutil` and `os.getloadavg()`
   - **Stocks:** Yahoo Finance via the `yfinance` Python library
-  - **(Optional) News:** RSS/Atom feeds via `xml.etree.ElementTree`
+  - **News / Articles:** RSS/Atom feeds via `feedparser`; full article extraction via `newspaper3k` with `readability-lxml` + `beautifulsoup4` fallback
 - **Production Stack**
   - Ubuntu VPS
   - Python virtual environment in project directory
@@ -273,7 +274,7 @@ From your local project directory (e.g., `/Users/you/First Project`):
 2. **Install dependencies**:
 
    ```bash
-  pip install flask psutil requests yfinance
+  pip install flask psutil requests yfinance feedparser newspaper3k readability-lxml beautifulsoup4
    ```
 
 3. **Run the Flask app directly**:
@@ -326,7 +327,7 @@ Typical layout:
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate
-  pip install flask psutil requests yfinance gunicorn
+  pip install flask psutil requests yfinance feedparser newspaper3k readability-lxml beautifulsoup4 gunicorn
    ```
 
 3. **Test with Gunicorn manually**:

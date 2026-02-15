@@ -195,7 +195,9 @@ def fetch_article():
     """Fetch and extract the full readable content of an article URL.
 
     Uses newspaper3k to download and parse the article, returning
-    the cleaned text, top image, and authors.
+    the cleaned text, top image, and authors.  Falls back to
+    readability-lxml + BeautifulSoup when newspaper fails to
+    extract meaningful content.
 
     Query params:
       ?url=<article-url>
@@ -206,25 +208,86 @@ def fetch_article():
     if not url:
         return jsonify({"error": "url parameter is required"}), 400
 
-    try:
-        article = Article(url)
-        article.download()
-        article.parse()
-    except ArticleException as e:
-        return jsonify({"error": str(e)}), 502
-    except Exception as e:  # noqa: BLE001
-        return jsonify({"error": str(e)}), 502
+    headers = {
+        "User-Agent": (
+            "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/122.0.0.0 Safari/537.36"
+        ),
+    }
 
-    # Build HTML content from the text (preserve paragraphs)
-    text = article.text or ""
-    paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
-    html_content = "".join(f"<p>{p}</p>" for p in paragraphs) if paragraphs else ""
+    text = ""
+    html_content = ""
+    title = ""
+    authors = []
+    publish_date = ""
+    top_image = ""
+
+    # ── Attempt 1: newspaper3k ──
+    try:
+        article = Article(url, request_timeout=12)
+        article.set_html(requests.get(url, headers=headers, timeout=12).text)
+        article.parse()
+
+        text = (article.text or "").strip()
+        title = article.title or ""
+        authors = article.authors or []
+        publish_date = article.publish_date.isoformat() if article.publish_date else ""
+        top_image = article.top_image or ""
+    except (ArticleException, requests.RequestException) as e:
+        # Will try fallback below
+        pass
+    except Exception as e:  # noqa: BLE001
+        pass
+
+    # ── Attempt 2: readability + BeautifulSoup fallback ──
+    if len(text) < 100:
+        try:
+            from readability import Document
+            from bs4 import BeautifulSoup
+
+            raw_html = requests.get(url, headers=headers, timeout=12).text
+
+            doc = Document(raw_html)
+            readable_html = doc.summary()
+            readable_title = doc.short_title()
+
+            soup = BeautifulSoup(readable_html, "html.parser")
+            # Remove scripts/styles just in case
+            for tag in soup(["script", "style", "iframe", "object", "embed"]):
+                tag.decompose()
+
+            fallback_text = soup.get_text(separator="\n\n").strip()
+
+            if len(fallback_text) > len(text):
+                text = fallback_text
+                html_content = str(soup)
+                if not title:
+                    title = readable_title or ""
+
+                # Try to grab top image from readability
+                if not top_image:
+                    img = soup.find("img", src=True)
+                    if img:
+                        src = img["src"]
+                        if src.startswith("http"):
+                            top_image = src
+        except ImportError:
+            # readability-lxml or bs4 not installed, skip fallback
+            pass
+        except Exception:  # noqa: BLE001
+            pass
+
+    # Build HTML from text if we don't already have it
+    if text and not html_content:
+        paragraphs = [p.strip() for p in text.split("\n\n") if p.strip()]
+        html_content = "".join(f"<p>{p}</p>" for p in paragraphs) if paragraphs else ""
 
     return jsonify({
-        "title": article.title or "",
-        "authors": article.authors or [],
-        "publish_date": article.publish_date.isoformat() if article.publish_date else "",
-        "top_image": article.top_image or "",
+        "title": title,
+        "authors": authors,
+        "publish_date": publish_date,
+        "top_image": top_image,
         "text": text,
         "html": html_content,
         "source_url": url,

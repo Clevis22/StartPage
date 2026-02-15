@@ -516,13 +516,15 @@
       const loadingEl = $("nrArticleLoading");
       if (loadingEl) loadingEl.remove();
 
-      if (data.error) {
-        // Fall back to RSS description
-        if (!article.description) {
-          bodyEl.innerHTML +=
-            `<p class="nr-reading-muted">Could not load full article.</p>
-             <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="nr-read-more-link">Read on original site →</a>`;
-        }
+      // Check if we actually got meaningful content
+      const hasFullText = data.text && data.text.trim().length > 80;
+      const hasHtml = data.html && data.html.trim().length > 80;
+      const hasContent = hasFullText || hasHtml;
+
+      if (data.error && !article.description) {
+        bodyEl.innerHTML +=
+          `<p class="nr-reading-muted">Could not load full article.</p>
+           <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="nr-read-more-link">Read on original site →</a>`;
         return;
       }
 
@@ -542,19 +544,26 @@
       }
 
       // Full article text as HTML paragraphs
-      if (data.html) {
-        html += `<div class="nr-reading-text">${sanitizeHtml(data.html)}</div>`;
-      } else if (data.text) {
-        const paragraphs = data.text.split(/\n\n+/).filter(p => p.trim());
-        html += '<div class="nr-reading-text">' +
-          paragraphs.map(p => `<p>${escapeHtml(p.trim())}</p>`).join("") +
-          '</div>';
+      if (hasContent) {
+        if (hasHtml) {
+          html += `<div class="nr-reading-text">${sanitizeHtml(data.html)}</div>`;
+        } else {
+          const paragraphs = data.text.split(/\n\n+/).filter(p => p.trim());
+          html += '<div class="nr-reading-text">' +
+            paragraphs.map(p => `<p>${escapeHtml(p.trim())}</p>`).join("") +
+            '</div>';
+        }
       } else {
-        // Keep the RSS description
-        html += '<div class="nr-reading-text">' + sanitizeHtml(article.description || "") + '</div>';
+        // Extraction failed or returned too little — show RSS description + explanation
+        if (article.description) {
+          html += '<div class="nr-reading-text">' + sanitizeHtml(article.description) + '</div>';
+          html += `<p class="nr-reading-muted" style="margin-top:16px;">Full article could not be extracted — the site may block automated reading. You can read the full version on the original site.</p>`;
+        } else {
+          html += `<p class="nr-reading-muted">Full article could not be extracted from this site.</p>`;
+        }
       }
 
-      // Read more link
+      // Read more link (always shown)
       html += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="nr-read-more-link">Read on original site →</a>`;
 
       bodyEl.innerHTML = html;
@@ -562,6 +571,16 @@
       console.error("Article fetch error:", e);
       const loadingEl = $("nrArticleLoading");
       if (loadingEl) loadingEl.remove();
+
+      // Show RSS description as fallback on network error
+      if (!selectedArticle || selectedArticle.link !== url) return;
+      let fallback = "";
+      if (article.description) {
+        fallback += '<div class="nr-reading-text">' + sanitizeHtml(article.description) + '</div>';
+      }
+      fallback += `<p class="nr-reading-muted">Could not connect to fetch the full article.</p>`;
+      fallback += `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="nr-read-more-link">Read on original site →</a>`;
+      bodyEl.innerHTML += fallback;
     }
   }
 
