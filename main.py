@@ -25,6 +25,7 @@ def server_stats():
     mem = psutil.virtual_memory()
     disk = psutil.disk_usage("/")
     cpu = psutil.cpu_percent(interval=0.2)
+    net = psutil.net_io_counters()
 
     # Uptime in seconds since last boot
     uptime_seconds = int(time.time() - psutil.boot_time())
@@ -68,6 +69,10 @@ def server_stats():
             },
             "uptime_seconds": uptime_seconds,
             "processes": processes,
+            "network": {
+                "bytes_sent": net.bytes_sent,
+                "bytes_recv": net.bytes_recv,
+            },
         }
     )
 

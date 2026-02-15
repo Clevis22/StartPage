@@ -70,6 +70,14 @@ const serverHistory = {
   mem: [],
 };
 
+const networkHistory = {
+  down: [],
+  up: [],
+  prevRecv: null,
+  prevSent: null,
+  prevTime: null,
+};
+
 // Stocks
 const DEFAULT_STOCK_TICKERS = ["AAPL", "MSFT", "GOOGL", "TSLA"];
 
@@ -181,6 +189,20 @@ function initVisibilityToggles() {
       if (show) {
         fetchStocks();
       }
+    });
+  }
+
+  const notesEl = $("notesWidget");
+  const notesToggle = $("toggleNotes");
+  const notesVisible = loadSetting("showNotes", true);
+
+  if (notesToggle && notesEl) {
+    notesToggle.checked = !!notesVisible;
+    notesEl.style.display = notesVisible ? "block" : "none";
+    notesToggle.addEventListener("change", () => {
+      const show = notesToggle.checked;
+      notesEl.style.display = show ? "block" : "none";
+      saveSetting("showNotes", show);
     });
   }
 }
@@ -691,6 +713,72 @@ async function fetchServerStats() {
     const processesHtml =
       rows || '<div class="muted">No process data available</div>';
 
+    // Compute network speeds
+    const net = data.network;
+    let networkHtml = `
+      <div class="network-graphs">
+        <div class="network-graph">
+          <div class="stat-label">↓ Down</div>
+          <div class="stat-sub muted">Collecting…</div>
+          <svg class="sparkline" viewBox="0 0 100 26" preserveAspectRatio="none"></svg>
+        </div>
+        <div class="network-graph">
+          <div class="stat-label">↑ Up</div>
+          <div class="stat-sub muted">Collecting…</div>
+          <svg class="sparkline" viewBox="0 0 100 26" preserveAspectRatio="none"></svg>
+        </div>
+      </div>
+    `;
+    if (net) {
+      const now = Date.now();
+      const recv = Number(net.bytes_recv || 0);
+      const sent = Number(net.bytes_sent || 0);
+
+      if (networkHistory.prevRecv !== null && networkHistory.prevTime !== null) {
+        const dt = (now - networkHistory.prevTime) / 1000;
+        if (dt > 0) {
+          const downSpeed = (recv - networkHistory.prevRecv) / dt;
+          const upSpeed = (sent - networkHistory.prevSent) / dt;
+          addToHistory(networkHistory.down, Math.max(0, downSpeed), 60);
+          addToHistory(networkHistory.up, Math.max(0, upSpeed), 60);
+        }
+      }
+
+      networkHistory.prevRecv = recv;
+      networkHistory.prevSent = sent;
+      networkHistory.prevTime = now;
+
+      if (networkHistory.down.length) {
+        const maxDown = Math.max(...networkHistory.down, 1);
+        const maxUp = Math.max(...networkHistory.up, 1);
+        const downNorm = networkHistory.down.map((v) => (v / maxDown) * 100);
+        const upNorm = networkHistory.up.map((v) => (v / maxUp) * 100);
+        const downPath = buildSparklinePath(downNorm, 100, 26);
+        const upPath = buildSparklinePath(upNorm, 100, 26);
+        const latestDown = networkHistory.down[networkHistory.down.length - 1] || 0;
+        const latestUp = networkHistory.up[networkHistory.up.length - 1] || 0;
+
+        networkHtml = `
+          <div class="network-graphs">
+            <div class="network-graph">
+              <div class="stat-label">↓ Down</div>
+              <div class="stat-sub">${formatSpeed(latestDown)}</div>
+              <svg class="sparkline" viewBox="0 0 100 26" preserveAspectRatio="none">
+                <polyline points="${downPath}" class="sparkline-line-down" />
+              </svg>
+            </div>
+            <div class="network-graph">
+              <div class="stat-label">↑ Up</div>
+              <div class="stat-sub">${formatSpeed(latestUp)}</div>
+              <svg class="sparkline" viewBox="0 0 100 26" preserveAspectRatio="none">
+                <polyline points="${upPath}" class="sparkline-line-up" />
+              </svg>
+            </div>
+          </div>
+        `;
+      }
+    }
+
     body.innerHTML = `
       <div class="server-uptime">
         <div class="stat-label">Uptime</div>
@@ -712,6 +800,7 @@ async function fetchServerStats() {
           </svg>
         </div>
       </div>
+      ${networkHtml}
       <div class="server-processes">
         <div class="stat-label">Top processes</div>
         <div class="process-list">
@@ -724,6 +813,12 @@ async function fetchServerStats() {
     console.error(e);
     body.innerHTML = '<div class="muted">Unable to fetch stats</div>';
   }
+}
+
+function formatSpeed(bytesPerSec) {
+  if (bytesPerSec < 1024) return `${Math.round(bytesPerSec)} B/s`;
+  if (bytesPerSec < 1024 * 1024) return `${(bytesPerSec / 1024).toFixed(1)} KB/s`;
+  return `${(bytesPerSec / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 
 function formatBytes(v) {
@@ -755,6 +850,22 @@ function isProbablyUrl(text) {
   }
 }
 
+function initNotes() {
+  const area = $("notesArea");
+  const clearBtn = $("notesClear");
+  if (!area) return;
+
+  area.value = loadSetting("notes", "");
+  area.addEventListener("input", () => saveSetting("notes", area.value));
+
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      area.value = "";
+      saveSetting("notes", "");
+    });
+  }
+}
+
 function init() {
   scheduleClockUpdates();
 
@@ -764,6 +875,7 @@ function init() {
   initSettingsPanel();
   initQuickLinksEditor();
   initStockSettings();
+  initNotes();
   renderCalendar();
 
   const searchInput = $("searchInput");

@@ -709,6 +709,31 @@ body {
   margin-top: 4px;
 }
 
+.network-graphs {
+  display: flex;
+  gap: 10px;
+}
+
+.network-graph {
+  flex: 1 1 0;
+  padding: 6px 8px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.18);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.sparkline-line-down {
+  fill: none;
+  stroke: #0a84ff;
+  stroke-width: 1.5;
+}
+
+.sparkline-line-up {
+  fill: none;
+  stroke: #ff9f0a;
+  stroke-width: 1.5;
+}
+
 .process-list {
   margin-top: 4px;
   display: flex;
@@ -957,6 +982,24 @@ body {
   .widget {
     flex: 0 0 auto;
   }
+}
+
+.notes-textarea {
+  width: 100%;
+  min-height: 80px;
+  background: rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  color: var(--text-main);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 10px;
+  resize: vertical;
+  outline: none;
+}
+
+.notes-textarea:focus {
+  border-color: var(--accent);
 }
 
 @media (max-width: 640px) {

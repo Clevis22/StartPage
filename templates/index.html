@@ -83,6 +83,16 @@
             </div>
           </article>
 
+          <article class="widget glass" id="notesWidget">
+            <header class="widget-header">
+              <h2>Notes</h2>
+              <button class="icon-button" id="notesClear" aria-label="Clear notes">✕</button>
+            </header>
+            <div class="widget-body">
+              <textarea id="notesArea" class="notes-textarea" placeholder="Type a note…"></textarea>
+            </div>
+          </article>
+
         </section>
       </main>
     </div>
@@ -117,6 +127,10 @@
           <label class="setting-row">
             <span>Show Stock Ticker</span>
             <input type="checkbox" id="toggleStocks" checked />
+          </label>
+          <label class="setting-row">
+            <span>Show Notes</span>
+            <input type="checkbox" id="toggleNotes" checked />
           </label>
         </div>
         <div class="settings-section">
